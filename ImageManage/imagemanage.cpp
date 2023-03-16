@@ -166,7 +166,7 @@ void ImageManage::SetResliceMode()
 }
 void ImageManage::slot_ReaderDICOMImage(const char *fn)
 {
-    reader->SetDirectoryName(fn);                               //这里主要，是文件夹哈，不是文件名
+    reader->SetDirectoryName(fn);                               //这里主要，是文件夹哈，不是文件名C:/Users/111/Desktop/dataset-verse19validation/derivatives/sub-verse011/sub-verse011_seg-vert_msk.nii.gz
     reader1->SetDirectoryName(fn);
     reader1->Update();
     reader->Update();                                           //得更新呀，惰性渲染
@@ -203,7 +203,7 @@ void ImageManage::slot_ReaderDICOMImage(const char *fn)
         peopleInforTextActor[i]->GetTextProperty()->SetFontSize(14);
         peopleInforTextActor[i]->GetTextProperty()->SetFontFamily(VTK_FONT_FILE);
         peopleInforTextActor[i]->GetTextProperty()->SetFontFile(QString("./Fonts/simhei.ttf").toUtf8());
-        peopleInforTextActor[i]->SetInput(QString::fromUtf8("患者姓名：").toUtf8()+reader->GetPatientName()+"\r\n"+"UID:"+reader->GetStudyUID());
+        peopleInforTextActor[i]->SetInput(QString::fromUtf8("患者姓名：").toUtf8()+/*reader->GetPatientName()*/+"\r\n"+"UID:"+/*reader->GetStudyUID()*/"");
     }
     peopleInforTextActor[0]->GetTextProperty()->SetColor(0, 1, 0);
     peopleInforTextActor[0]->SetDisplayPosition(5,ui->widget_1->height()-40);
@@ -281,8 +281,7 @@ void ImageManage::slot_ReaderDICOMImage(const char *fn)
 
       /*BLINN-PHONE*/
 
-        vtkSmartPointer<vtkVolumeProperty> volumeProperty =
-            vtkSmartPointer<vtkVolumeProperty>::New();
+        volumeProperty = vtkSmartPointer<vtkVolumeProperty>::New();
         volumeProperty->SetInterpolationTypeToLinear();
         volumeProperty->ShadeOn();
         volumeProperty->SetAmbient(0.4);
@@ -291,9 +290,9 @@ void ImageManage::slot_ReaderDICOMImage(const char *fn)
 
         vtkSmartPointer<vtkPiecewiseFunction> compositeOpacity =
             vtkSmartPointer<vtkPiecewiseFunction>::New();
-        compositeOpacity->AddPoint(70, 0.00);
-        compositeOpacity->AddPoint(90, 0.40);
-        compositeOpacity->AddPoint(180, 0.60);
+//        compositeOpacity->AddPoint(70, 0.00);
+//        compositeOpacity->AddPoint(90, 0.40);
+//        compositeOpacity->AddPoint(180, 0.60);
         volumeProperty->SetScalarOpacity(compositeOpacity);
 
         vtkSmartPointer<vtkColorTransferFunction> colora =
@@ -516,8 +515,8 @@ void ImageManage::on_pushButton_clicked()
 
     /*mc读取polydata用来提取点集*/
            extracter = vtkSmartPointer<vtkMarchingCubes>::New();
-           reader1->SetDataSpacing(5, 5, 5);
-           extracter->SetInputData(reader1->GetOutput());
+         //  reader1->SetDataSpacing(5, 5, 5);
+           extracter->SetInputData(reader->GetOutput());
            extracter->SetValue(0,250);
            extracter->Update();
 
@@ -540,6 +539,7 @@ void ImageManage::on_pushButton_clicked()
                qDebug() << "QVTKOpenGLNativeWidget requires a `vtkGenericOpenGLRenderWindow`. `";
 
                double force[3];
+               printf("check : %f ,%f ,%f  /n",force[0],force[1],force[2]);
                vtkPointData* ptData = pdNormals->GetOutput()->GetPointData();
                  if( ptData )
                  {
@@ -556,14 +556,55 @@ void ImageManage::on_pushButton_clicked()
                               force[1]+=value[1];
                               force[2]+=value[2];
                               //printf( "Value: (%lf, %lf, %lf)\n", value[0], value[1], value[2] );
+
                           }
                      }
                  }
+//                 vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+//                 mapper->SetInputData(vispit->GetOutput());
+//                 vtkSmartPointer<vtkActor> testa = vtkSmartPointer<vtkActor>::New();
+//                 testa->SetMapper(mapper);
+//                 testa->GetProperty()->SetPointSize(1);
+//                 testa->GetProperty()->SetColor(1,0,0);
+//                 ren->AddActor(testa);
+//                 ui->widget_4->renderWindow()->Render();
+                 //_sleep(50000);
+                 //ren->RemoveActor(testa);
+
+
+
+
+
                 double a=sqrt(pow(force[0],2)+pow(force[1],2)+pow(force[2],2));
                 force[0]/=a;
                 force[1]/=a;
                 force[2]/=a;
                 printf("force: (%lf, %lf, %lf)\n",force[0],force[1],force[2]);
+                double Camangle[3];
+                Camangle[0]=ren->GetActiveCamera()->GetDirectionOfProjection()[0];
+                 Camangle[1]=ren->GetActiveCamera()->GetDirectionOfProjection()[1];
+                  Camangle[2]=ren->GetActiveCamera()->GetDirectionOfProjection()[2];
+                  printf("Camangle: (%lf, %lf, %lf)\n",Camangle[0],Camangle[1],Camangle[2]);
+                  Eigen::Vector3d v1(force[0],force[1],force[2]);
+                  Eigen::Vector3d v2(Camangle[0],Camangle[1],Camangle[2]);
+                  double radian_angle = atan2(v1.cross(v2).norm(), v1.transpose() * v2);
+                     if (v1.cross(v2).z() < 0) {
+                         radian_angle = 1.5707 - radian_angle;
+                     }
+                  printf("angle: %f \n",radian_angle*180/3.1415);
+                  double cosa = cos(radian_angle);
+                  vtkCamera *cam = this->ren->GetActiveCamera();//距离
+                  double dis = cam->GetDistance();
+                  double B  = -0.0004*pow(dis,3)+0.0082*pow(dis,2)+0.1129;
+                  double C  = 1.0733*exp(-0.476*dis);
+                  volumeProperty->SetAmbient(fmax(cosa,0));
+                  volumeProperty->SetDiffuse(1/(1+B*dis+2*C*pow(dis,2))*0.6*fmax(cosa,0)); //diffuse = (1/(a+b*d+c*d^2))*cos(<lam*Theta>)*0.6*1
+                  volumeProperty->SetSpecular(1/(1+B*dis+2*C*pow(dis,2))*0.6*pow(fmax(cosa,0),0.5));//specular = (1 / (a + b * d + c * d^2)) * pow(max(N=lam · H=cam(在cam跟踪时), 0), shininess高光常数) * specularColor * specularLight
+                  printf("Ambient: %f\n",volumeProperty->GetAmbient());
+                  printf("Diffuse: %f\n",volumeProperty->GetDiffuse());
+                  printf("Specular: %f\n",volumeProperty->GetSpecular());
+
+
 
 
 }

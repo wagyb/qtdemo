@@ -102,6 +102,7 @@ HEADERS  += mainwindow.h \
 
 FORMS    += mainwindow.ui \
     ExampleOrg/GraphItem/graphitem.ui \
+    ExampleOrg/Study_VTK_Together01.ui \
     ExampleOrg/ambientspheres.ui \
     ExampleOrg/cone2.ui \
     ExampleOrg/customlinkview.ui \

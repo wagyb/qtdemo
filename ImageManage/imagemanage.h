@@ -91,7 +91,7 @@
 #include<vtkImageGaussianSmooth.h>
 #include<vtkSelectVisiblePoints.h>
 #include<vtkPPolyDataNormals.h>
-
+#include<vtkeigen/eigen/Dense>
 
 
 
@@ -166,7 +166,7 @@ private:
      vtkSmartPointer<vtkMarchingCubes> extracter;
      vtkSmartPointer<vtkPiecewiseFunction> newOpacity;
      vtkSmartPointer<vtkVolume> volume;
-
+    vtkSmartPointer<vtkVolumeProperty> volumeProperty;
      vtkSmartPointer<vtkRenderWindowInteractor>iren;
 };
 
